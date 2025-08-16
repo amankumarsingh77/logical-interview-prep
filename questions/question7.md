@@ -1,72 +1,67 @@
-# Scenario: Resilient API Client with Exponential Backoff
+## Scenario: Suspicious Activity Detection
 
-Imagine you are writing a client that needs to fetch data from an external API. This API is known to be unreliable; sometimes requests fail due to temporary issues like network timeouts or server overload. Instead of failing immediately, you want your client to automatically retry the request a few times.
+You are building a security monitoring tool for a large cloud provider. The tool ingests access logs from various services. Your task is to identify users who might be performing suspicious reconnaissance activities.
 
-## Your Task
+### Suspicious User Criteria
 
-Write a generic Retry function in Go that takes another function as an argument and executes it. If the function fails with a transient (retryable) error, your Retry function should wait for a period and try again, implementing an exponential backoff strategy for the delay.
+A user is considered **"suspicious"** if they access **more than 5 different services** within **any 60-minute window**.
 
-### Requirements
+### Log Format
 
-#### Function Signature
+Each log is a string in the format:
 
-```go
-func Retry(fn func() (string, error), retries int, delay time.Duration) (string, error)
+```
+<timestamp>,<userID>,<serviceID>
 ```
 
-#### Retry Logic
+* **timestamp**: Unix timestamp (integer)
+* **userID**: String identifying the user
+* **serviceID**: String identifying the service
 
-- If `fn` executes successfully, `Retry` should return its result immediately.
-- If `fn` returns a retryable error, the `Retry` function should wait and then call `fn` again.
-- If `fn` returns a non-retryable error (e.g., "400 Bad Request"), `Retry` should stop immediately and return that error.
+The logs are **not guaranteed to be sorted by time**.
 
-#### Exponential Backoff
-
-The delay between retries should double after each failed attempt. For example, if the initial delay is 100ms, the sequence of delays should be 100ms, 200ms, 400ms, and so on.
-
-#### Max Retries
-
-If the function still fails after the specified number of retries, `Retry` should give up and return the last error it received.
-
----
-
-## Provided for You
+### Function Signature (in Go)
 
 ```go
-import (
-    "errors"
-    "fmt"
-    "math/rand"
-    "time"
-)
+func findSuspiciousUsers(logs []string) []string
+```
 
-// Define specific error types to distinguish between failures.
-var ErrTransient = errors.New("a transient error occurred")
-var ErrPermanent = errors.New("a permanent error occurred")
+### Example Input
 
-// UnreliableAPICall simulates a function that might fail.
-func UnreliableAPICall() (string, error) {
-    // Simulate random failures
-    r := rand.Intn(10)
-
-    if r < 3 { // 30% chance of permanent error
-        fmt.Println("API call failed with a permanent error.")
-        return "", ErrPermanent
-    } else if r < 7 { // 40% chance of transient error
-        fmt.Println("API call failed with a transient error.")
-        return "", ErrTransient
-    }
-
-    fmt.Println("API call succeeded!")
-    return "Success!", nil
+```go
+[]string{
+  "1672531200,user-a,service-auth",    // user-a, 10:00
+  "1672531260,user-b,service-auth",    // user-b, 10:01
+  "1672531320,user-a,service-storage", // user-a, 10:02
+  "1672531380,user-a,service-compute", // user-a, 10:03
+  "1672531440,user-a,service-db",      // user-a, 10:04
+  "1672534740,user-a,service-network", // user-a, 10:59 (5th service)
+  "1672534800,user-a,service-logging", // user-a, 11:00 (6th service in 60 mins) -> user-a is suspicious
+  "1672534860,user-b,service-cache",   // user-b, 11:01
 }
 ```
 
----
+### Expected Output
 
-## Thought Process
+```go
+[]string{"user-a"} // Sorted list of unique suspicious users
+```
 
-- How would you structure the retry loop?
-- How do you decide whether to retry or return an error?
-- How do you double the delay between retries?
-- How do you ensure it doesn’t retry more than `retries` times?
+### Task
+
+* Implement the `findSuspiciousUsers` function.
+* The function should return a slice of unique user IDs that have been flagged.
+* The result should be **sorted alphabetically**.
+
+### Guidelines
+
+* Think through the data structures required:
+
+    * Map of userID to a list of their access events
+    * Use sliding window per user to track distinct services accessed in 60-minute intervals
+* Edge cases to consider:
+
+    * Same service accessed multiple times should not be double-counted
+    * Sparse access logs (e.g., large gaps between entries)
+
+Let me know when you're ready to start coding or would like help writing the Go implementation.

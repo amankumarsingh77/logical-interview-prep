@@ -1,57 +1,90 @@
 package main
 
-import "fmt"
+import (
+	"container/list"
+	"fmt"
+)
 
-func main() {
-	tasks := map[string][]string{
-		"compile":       {"download_deps"},
-		"run_tests":     {"compile"},
-		"create_image":  {"compile"},
-		"deploy":        {"run_tests", "create_image"},
-		"download_deps": {},
-	}
-	fmt.Println(ResolveOrder(tasks))
+type Node struct {
+	key   string
+	value string
 }
 
-func ResolveOrder(tasks map[string][]string) ([]string, error) {
-	visited := make(map[string]bool)
-	onPath := make(map[string]bool)
-	var result []string
-	var visit func(task string) error
-	visit = func(task string) error {
-		if onPath[task] {
-			return fmt.Errorf("cycle detected on filed %v", task)
-		}
-		if visited[task] {
-			return nil
-		}
+type LRUCache struct {
+	capacity int
+	list     *list.List
+	cache    map[string]*list.Element
+}
 
-		onPath[task] = true
-
-		for _, t := range tasks[task] {
-			if _, ok := tasks[t]; !ok {
-				return fmt.Errorf("could not find task %v in the given tasks", t)
-			}
-			if !visited[t] {
-				if err := visit(t); err != nil {
-					return err
-				}
-			}
-		}
-
-		visited[task] = true
-		onPath[task] = false
-		result = append(result, task)
-		return nil
+func NewLRUCache(capacity int) *LRUCache {
+	return &LRUCache{
+		capacity: capacity,
+		list:     list.New(),
+		cache:    make(map[string]*list.Element),
 	}
+}
 
-	for task := range tasks {
-		if !visited[task] {
-			if err := visit(task); err != nil {
-				return nil, err
+func (l *LRUCache) Get(key string) (string, bool) {
+	ele, ok := l.cache[key]
+	if !ok {
+		return "", false
+	}
+	l.list.MoveToFront(ele)
+	return ele.Value.(Node).value, true
+}
+
+func (l *LRUCache) Put(key string, value string) {
+	ele, ok := l.cache[key]
+	if ok {
+		l.list.MoveToFront(ele)
+		l.cache[key].Value.(*Node).value = value
+	} else {
+		if l.capacity == l.list.Len() {
+			back := l.list.Back()
+			if back != nil {
+				l.list.Remove(back)
+				delete(l.cache, back.Value.(Node).key)
 			}
 		}
+		pushedElement := l.list.PushFront(Node{key, value})
+		l.cache[key] = pushedElement
 	}
+}
 
-	return result, nil
+func (l *LRUCache) printState(action string) {
+	fmt.Printf("--- After %s ---\n", action)
+	fmt.Print("Order (MRU -> LRU): ")
+	for e := l.list.Front(); e != nil; e = e.Next() {
+		fmt.Printf("[%s: %s] ", e.Value.(Node).key, e.Value.(Node).value)
+	}
+	fmt.Println("\n--------------------")
+}
+
+func main() {
+	// Create a cache with capacity 3
+	lru := NewLRUCache(3)
+	fmt.Println("Created Cache with Capacity 3")
+	lru.printState("Init")
+
+	// Add three items
+	lru.Put("A", "1")
+	lru.printState(`Put("A", "1")`)
+	lru.Put("B", "2")
+	lru.printState(`Put("B", "2")`)
+	lru.Put("C", "3")
+	lru.printState(`Put("C", "3")`)
+
+	// Get key "A". It should now become the most recently used.
+	val, found := lru.Get("A")
+	fmt.Printf("Get(\"A\") -> Value: %s, Found: %v\n", val, found)
+	lru.printState(`Get("A")`)
+
+	// Add key "D". This should cause key "B" to be evicted.
+	lru.Put("D", "4")
+	lru.printState(`Put("D", "4")`)
+
+	// Try to get key "B". It should be gone.
+	val, found = lru.Get("B")
+	fmt.Printf("Get(\"B\") -> Value: %s, Found: %v\n", val, found)
+	lru.printState(`Get("B")`)
 }

@@ -1,47 +1,58 @@
+# Logical interview prep
+## Custom Gem
 
-# Scenario: Concurrent Data Aggregator
+Of course. Let's tackle a more complex and dynamic problem that involves not just splitting strings, but interpreting them.
 
-Imagine you're building a backend service. One of its features is to display aggregated data from several third-party sources. To ensure a snappy user experience, you need to fetch this data concurrently.
+### Scenario: Template String Resolver ⚙️
 
-## Your Task
+You're working on a feature for a new microservice that sends customized user notifications. The notification templates are stored as strings with placeholders, and your job is to create a function that resolves these templates using a given data structure.
 
-Your task is to implement a Go function that fetches "reports" for a list of IDs. However, these external API calls can be slow or fail. Your function must be resilient and efficient.
+The placeholders follow the format `${path.to.value}`. The path represents a series of keys used to look up a value in a nested `map[string]interface{}`.
 
-### Requirements
+#### Example
 
-#### Function Signature
-Create a function with the following signature:
-
-```go
-func GetAggregatedReports(reportIDs []string) map[string]Report
+**Template String:**
+```
+Hello, ${user.name}! You have an upcoming appointment for ${appointment.service}.
 ```
 
-#### Mock API Call
-You don't need to call a real API. Create a mock function to simulate the network call:
-
+**Data Map (in Go):**
 ```go
-func fetchReport(reportID string) (Report, error)
+data := map[string]interface{}{
+    "user": map[string]interface{}{
+        "name": "Alex",
+        "id":   123,
+    },
+    "appointment": map[string]interface{}{
+        "service": "Dental Check-up",
+        "time":    "2025-08-16T14:00:00Z",
+    },
+}
 ```
 
-- This function should have a random delay between 50ms and 500ms to simulate network latency.
-- It should also randomly fail (return an error) for about 20% of the calls.
-- The Report can be a simple struct, e.g.:
-  ```go
-  type Report struct { 
-      ID string
-      Data string 
-  }
-  ```
-
-#### Concurrency
-Your `GetAggregatedReports` function must call `fetchReport` for all `reportIDs` concurrently.
-
-#### Error Handling
-If fetching a report for one ID fails, it must not stop the other requests. The final map should only contain reports that were successfully fetched.
-
-#### Timeout
-The entire `GetAggregatedReports` operation must have a global timeout of 300ms. If the timeout is hit, the function should return whatever data it has managed to collect up to that point.
+**Expected Output String:**
+```
+Hello, Alex! You have an upcoming appointment for Dental Check-up.
+```
 
 ---
 
-I encourage you to think out loud as you approach this. How would you structure your Go code to handle the concurrency, error handling, and the timeout? You can start by describing your high-level plan, or you can jump straight into the code.
+### Your Task
+
+Write a Go function:
+
+```go
+ResolveTemplate(template string, data map[string]interface{}) (string, error)
+```
+
+It must satisfy these requirements:
+
+1. **Successful Resolution:** It should correctly replace all valid placeholders with their corresponding values from the data map.
+
+2. **Nested Lookups:** It must be able to handle nested paths (e.g., `user.name`).
+
+3. **Missing Paths:** If a placeholder refers to a path that does not exist in the data map (e.g., `${user.email}`), it should be replaced with an empty string.
+
+4. **Error Handling:** The function should return an error if it encounters a malformed placeholder.  
+   A malformed placeholder is one that starts with `${` but does not have a closing brace `}`.  
+   Example: `Hello, ${user.name.`

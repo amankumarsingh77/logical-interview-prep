@@ -1,150 +1,118 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
-	"sync"
+	"io"
+	"strings"
 )
 
-type Item struct {
-	Name  string
-	Price int
-	Stock int
+type Options struct {
+	Count      bool // -c: Prefix each line with its consecutive count.
+	Duplicates bool // -d: Only print lines that are repeated.
+	Unique     bool // -u: Only print lines that are unique (not repeated).
 }
 
-type VendingMachine struct {
-	UserBalance int
-	Inventory   map[string]Item
-	sync.Mutex
-}
-
-var validCoins = map[int]bool{
-	1:  true,
-	5:  true,
-	10: true,
-	25: true,
-}
-
-func main() {
-	// 1. Initialize the machine with some inventory
-	inventory := map[string]Item{
-		"Cola":  {Name: "Cola", Price: 25, Stock: 5},
-		"Chips": {Name: "Chips", Price: 35, Stock: 10},
-		"Candy": {Name: "Candy", Price: 10, Stock: 20},
+func Uniq(reader io.Reader, writer io.Writer, opts Options) error {
+	scanner := bufio.NewScanner(reader)
+	if !scanner.Scan() {
+		return fmt.Errorf("no lines found")
 	}
-	vm := NewVendingMachine(inventory)
-
-	fmt.Println("Vending Machine is ready.")
-	fmt.Println("---")
-
-	// --- Scenario 1: Successful Purchase ---
-	fmt.Println("## Scenario 1: Successful Purchase of Candy ##")
-	fmt.Println("Inserting a 10 coin...")
-	if err := vm.InsertCoin(10); err != nil {
-		fmt.Printf("Error: %v\n", err)
-	}
-	fmt.Println("Selecting 'Candy' (Price 10)...")
-	change, err := vm.SelectProduct("Candy")
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+	freq := make(map[string]int)
+	if !opts.Count && !opts.Duplicates && !opts.Unique {
+		previous := scanner.Text()
+		if _, err := writer.Write([]byte(previous + "\n")); err != nil {
+			return fmt.Errorf("failed to write the data to stream :%v", err)
+		}
+		for scanner.Scan() {
+			currText := scanner.Text()
+			if currText != previous {
+				if _, err := writer.Write([]byte(currText + "\n")); err != nil {
+					return fmt.Errorf("failed to write the data to stream :%v", err)
+				}
+				previous = currText
+			}
+		}
 	} else {
-		fmt.Printf("Success! Product dispensed. Change: %d\n", change)
-	}
-	fmt.Println("---")
+		var lines []string
+		for scanner.Scan() {
+			currLine := scanner.Text()
+			freq[currLine]++
+			if freq[currLine] == 1 {
+				lines = append(lines, currLine)
+			}
+		}
+		for _, line := range lines {
+			count := freq[line]
+			write := false
+			if opts.Duplicates && count > 1 {
+				write = true
+			} else if opts.Unique && count == 1 {
+				write = true
+			} else if opts.Count && !opts.Duplicates && !opts.Unique {
+				write = true
+			}
+			if write {
+				var out string
+				if opts.Count {
+					out = fmt.Sprintf("%d %s\n", count, line)
+				} else {
+					out = line + "\n"
+				}
+				if _, err := writer.Write([]byte(out)); err != nil {
+					return err
+				}
+			}
 
-	// --- Scenario 2: Insufficient Funds & Cancel ---
-	fmt.Println("## Scenario 2: Insufficient Funds & Cancel ##")
-	fmt.Println("Inserting a 25 coin...")
-	if err := vm.InsertCoin(25); err != nil {
-		fmt.Printf("Error: %v\n", err)
+		}
 	}
-	fmt.Println("Selecting 'Chips' (Price 35)...")
-	change, err = vm.SelectProduct("Chips")
-	if err != nil {
-		// This is the expected outcome
-		fmt.Printf("Error (as expected): %v\n", err)
-	} else {
-		fmt.Printf("Success! Product dispensed. Change: %d\n", change)
-	}
-	fmt.Println("Transaction incomplete. Cancelling...")
-	refund := vm.Cancel()
-	fmt.Printf("Refunded amount: %d\n", refund)
-	fmt.Println("---")
 
-	// --- Scenario 3: Purchase with Change ---
-	fmt.Println("## Scenario 3: Purchase with Change ##")
-	fmt.Println("Inserting a 25 coin...")
-	vm.InsertCoin(25)
-	fmt.Println("Inserting another 25 coin...")
-	vm.InsertCoin(25)
-	fmt.Println("Total inserted: 50")
-	fmt.Println("Selecting 'Chips' (Price 35)...")
-	change, err = vm.SelectProduct("Chips")
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-	} else {
-		fmt.Printf("Success! Product dispensed. Change: %d\n", change)
-	}
-	fmt.Println("---")
-
-	// --- Scenario 4: Out of Stock ---
-	fmt.Println("## Scenario 4: Item is Out of Stock ##")
-	// Buy the remaining 4 Colas
-	for i := 0; i < 5; i++ {
-		vm.InsertCoin(25)
-		vm.SelectProduct("Cola")
-	}
-	fmt.Println("All Colas have been purchased.")
-
-	fmt.Println("Attempting to buy one more Cola...")
-	vm.InsertCoin(25)
-	_, err = vm.SelectProduct("Cola")
-	if err != nil {
-		fmt.Printf("Error (as expected): %v\n", err)
-	}
-	fmt.Println("---")
-}
-
-func NewVendingMachine(inventory map[string]Item) *VendingMachine {
-	return &VendingMachine{
-		UserBalance: 0,
-		Inventory:   inventory,
-	}
-}
-
-func (v *VendingMachine) InsertCoin(coinValue int) error {
-	if !validCoins[coinValue] {
-		return fmt.Errorf("not a valid coin")
-	}
-	v.Lock()
-	v.UserBalance += coinValue
-	v.Unlock()
 	return nil
 }
 
-func (v *VendingMachine) SelectProduct(productName string) (int, error) {
-	v.Lock()
-	defer v.Unlock()
-	prod, ok := v.Inventory[productName]
-	if !ok {
-		return 0, fmt.Errorf("no product found with name : %v", productName)
-	}
-	if prod.Stock == 0 {
-		return 0, fmt.Errorf("%s not in stock", productName)
-	}
-	if v.UserBalance < prod.Price {
-		return 0, fmt.Errorf("insuffcient bal : %d", v.UserBalance)
-	}
-	prod.Stock--
-	v.Inventory[productName] = prod
-	change := v.UserBalance - prod.Price
-	v.UserBalance = 0
-	return change, nil
-}
+func main() {
+	// Sample input data to test against.
+	const sampleInput = `apple
+apple
+banana
+cherry
+cherry
+mango
+cherry
+apple
+banana
+banana`
 
-func (v *VendingMachine) Cancel() int {
-	v.Lock()
-	defer v.Unlock()
-	change := v.UserBalance
-	v.UserBalance = 0
-	return change
+	// Define all test cases.
+	testCases := []struct {
+		name    string
+		options Options
+	}{
+		{"No Options", Options{}},
+		{"Count (-c)", Options{Count: true}},
+		{"Duplicates (-d)", Options{Duplicates: true, Count: true}},
+		{"Unique (-u)", Options{Unique: true}},
+	}
+
+	// Run each test case.
+	for _, tc := range testCases {
+		// Use strings.NewReader to create an io.Reader from our sample string.
+		reader := strings.NewReader(sampleInput)
+
+		// Use bytes.Buffer to capture the output as an io.Writer.
+		var writer bytes.Buffer
+
+		fmt.Printf("--- Testing: %s ---\n", tc.name)
+
+		// Call your function with the test case's options.
+		if err := Uniq(reader, &writer, tc.options); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			continue
+		}
+
+		// Print the captured output.
+		fmt.Print(writer.String())
+		fmt.Println("--------------------\n")
+	}
 }

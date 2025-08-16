@@ -1,60 +1,117 @@
-# Logical Interview Prep: Vending Machine Logic
+# Scenario: Simplified uniq Command-Line Tool
 
-**Custom Gem**
-
-Excellent. Let's tackle a new problem. This one is less about complex algorithms and more about modeling state and behavior in a clean, robust way.
-
-## Scenario: Vending Machine Logic
-
-Your task is to design and implement the logic for a simple vending machine in Go. The machine needs to manage inventory, handle money, and process user selections.
-
-### Core Requirements
-
-- **Inventory**: The machine stocks several products. Each product has a name (e.g., "Cola"), a price, and a quantity.
-
-- **Money**: The machine accepts a predefined set of coin denominations (e.g., 1, 5, 10, 25). It also needs to track the total money inserted by a user for the current transaction.
-
-- **State**: The machine must manage its internal state, including the quantity of each item and the current user's balance.
-
-### Required Functionality
-
-You should design a `VendingMachine` struct with the following methods:
-
-#### `InsertCoin(coinValue int) error`
-
-- Accepts a coin value.
-- If the coin is a valid denomination, it adds it to the user's current balance.
-- If the coin is invalid, it should return an error.
-
-#### `SelectProduct(productName string) (change int, err error)`
-
-This is the core of the operation. It should perform these checks in order:
-
-- Does the product exist?
-- Is the product in stock?
-- Has the user inserted enough money?
-
-If any check fails, return a descriptive error. The user's inserted money should remain for them to make another choice or cancel.
-
-If all checks pass:
-- Dispense the item (i.e., decrement its quantity)
-- Calculate the correct change to return
-- Reset the user's balance to zero
-- Return the change
-
-#### `Cancel() int`
-
-- Cancels the current transaction.
-- Returns the total amount of money the user had inserted.
-- Resets the user's balance to zero.
+The Unix command-line tool `uniq` is a utility that filters adjacent matching lines from an input file or stream. We're going to implement a simplified version of it.
 
 ---
 
-### Design Considerations
+## Your Task
 
-How would you structure the `VendingMachine` and any related data types?
+Write a Go function that reads text from an `io.Reader`, processes it to handle adjacent duplicate lines according to a set of options, and writes the result to an `io.Writer`.
 
-Think about:
-- The fields you'd need to track the state
-- How you'd handle the different success and failure paths in the `SelectProduct` method
-- How to separate concerns like product management, balance tracking, and validation
+---
+
+## Core Logic
+
+The basic behavior is to read line by line. If a line is identical to the one immediately preceding it, it's considered a duplicate and should be handled according to the options.
+
+---
+
+## Function and Options
+
+Your implementation should be based on this function signature:
+
+```go
+// Options struct to hold the command-line flags.
+type Options struct {
+    Count      bool // -c: Prefix each line with its consecutive count.
+    Duplicates bool // -d: Only print lines that are repeated.
+    Unique     bool // -u: Only print lines that are unique (not repeated).
+}
+
+func Uniq(reader io.Reader, writer io.Writer, opts Options) error {
+    // Your implementation goes here.
+}
+```
+
+---
+
+## Behavior Based on Options
+
+### Given the following input:
+
+```
+apple
+apple
+banana
+cherry
+cherry
+cherry
+apple
+```
+
+---
+
+### No Options (`Options{}`)
+
+Print each unique **adjacent** line.
+
+```
+apple
+banana
+cherry
+apple
+```
+
+---
+
+### Count (`-c`)
+
+Prefix each output line with the number of times it appeared consecutively.
+
+```
+2 apple
+1 banana
+3 cherry
+1 apple
+```
+
+---
+
+### Duplicates (`-d`)
+
+Only print the lines that appeared more than once consecutively.
+
+```
+apple
+cherry
+```
+
+---
+
+### Unique (`-u`)
+
+Only print the lines that were **not** repeated.
+
+```
+banana
+apple
+```
+
+---
+
+**Note:** The `-d` and `-u` options are mutually exclusive and you can assume they won't be true at the same time.
+
+---
+
+## Implementation Hint
+
+Structure the logic inside the `Uniq` function to:
+
+* Read input line by line.
+* Track the previous line and its repeat count.
+* Depending on the options:
+
+    * Print all deduplicated lines (`default`).
+    * Print lines with counts (`-c`).
+    * Print only repeated lines (`-d`).
+    * Print only non-repeated lines (`-u`).

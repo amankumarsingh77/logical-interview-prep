@@ -1,49 +1,47 @@
-# Scenario: Task Dependency Resolver
 
-Imagine you're building a script for an automated build system. The system needs to run a series of tasks, but some tasks must be completed before others can begin. For example, you must compile the code before you can `run_tests`.
+# Scenario: In-Memory LRU Cache
+
+Many high-performance applications, from databases to web servers, use an in-memory cache to avoid re-computing or re-fetching frequently accessed data. To prevent the cache from growing indefinitely, they use an "eviction policy." One of the most common policies is LRU (Least Recently Used).
 
 ## Your Task
 
-Write a function in Go that takes a set of tasks and their dependencies and returns a valid sequence in which to execute them.
+Your task is to implement an LRU cache in Go from scratch. It will store string key-value pairs and must operate with a fixed capacity.
 
 ### Requirements
 
-- The input will be a map where the key is the task name and the value is a slice of its dependencies.
-- Language: Go
+#### Structure
+You'll need to define a `LRUCache` struct.
+
+#### Constructor
+Create a constructor function:
 
 ```go
-// Example Input
-tasks := map[string][]string{
-    "compile":         {"download_deps"},
-    "run_tests":       {"compile"},
-    "create_image":    {"compile"},
-    "deploy":          {"run_tests", "create_image"},
-    "download_deps":   {},
-}
+NewLRUCache(capacity int) *LRUCache
 ```
 
-- Your function signature should be:
+#### Core Methods
+
+Implement the following two methods on your struct:
 
 ```go
-func ResolveOrder(tasks map[string][]string) ([]string, error)
+Get(key string) (string, bool)
 ```
+- If the key exists in the cache, it should return the corresponding value and `true`.
+- A `Get` operation counts as using an item, so it should now be considered the most recently used.
+- If the key does not exist, it should return an empty string and `false`.
 
-- The function should return a slice of strings (`[]string`) representing a valid execution order.  
-  For the example above, a valid output would be:  
-  `["download_deps", "compile", "run_tests", "create_image", "deploy"]`  
-  (Note: `run_tests` and `create_image` could be swapped.)
-
-- Your function **must detect circular dependencies**.  
-  If Task A depends on Task B, and Task B depends on Task A, it's impossible to resolve.  
-  In this case, your function should return an error.
-
-- If a task lists a dependency that isn't defined as a task itself, that should also result in an error.
+```go
+Put(key, value string)
+```
+- If the key already exists, update its value and mark it as the most recently used.
+- If the key is new:
+    - If the cache is already at full capacity, evict the least recently used item before inserting the new one.
+    - Add the new key-value pair to the cache. It is now the most recently used item.
 
 ---
 
-### Hints
+## Hints
 
-- How would you keep track of the tasks you've already added to your execution plan?
-- How would you detect a cycle?
+How would you approach this? Think about the data structures you would need to achieve both fast lookups (`Get`) and efficient removal of the least-used item.
 
-> This is a classic problem that can be solved using **topological sorting** (e.g., using DFS). 
+As before, feel free to outline your plan first or dive right into the code.
