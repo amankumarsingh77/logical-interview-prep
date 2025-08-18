@@ -1,57 +1,64 @@
-Scenario: Command-Line Argument Parser ⌨️
+# Scenario: Command-Line Argument Parser ⌨️
 
-You're creating a small command-line tool. A core piece of this tool is
-a function that parses the user's raw input string into a structured
-command and a set of flags.
+You're building a command-line interface (CLI) for an application. Your
+first task is to write a robust parser that takes the raw user input as
+a single string and transforms it into a structured format that your
+application can easily use.
 
-The input string follows a few simple rules:
+## Your Task
 
-    The first word is always the command.
+Write a Go function,
+`ParseCommand(input string) (*ParsedCommand, error)`, that accepts the
+raw input string. It should return a pointer to a `ParsedCommand` struct
+containing the parsed data.
 
-    Words starting with -- (long flag) or - (short flag) are considered flag names.
+Here is the struct definition:
 
-    A flag can be a boolean flag (it has no value) or it can have a value, which is the very next word after the flag.
+``` go
+type ParsedCommand struct {
+    Command string
+    // Flag values can be strings or booleans
+    Flags   map[string]interface{}
+}
+```
 
-    To handle values with spaces, arguments can be enclosed in "double quotes". The quotes should be removed from the final value.
+## Parsing Rules
 
-Your Task
+Your function must follow these five rules:
 
-Write a Go function ParseCommand(input string) (\*ParsedCommand, error)
-that takes a raw input string and returns a ParsedCommand struct.
+1.  **The Command**: Any text from the beginning of the input string
+    until the first word that starts with a hyphen (-) is considered the
+    command. This means the command can be a single word (e.g.,
+    `publish`) or multiple words (e.g., `remote add`).
 
-Here's the struct you should populate: Go
+2.  **Flags and Values**: A word beginning with `-` or `--` is a flag.
+    The very next word is its value, unless that word is also a flag.
 
-type ParsedCommand struct { Command string // Flags can be bool, string,
-etc. Flags map\[string\]interface{} }
+3.  **Boolean Flags**: A flag is considered a boolean flag (with a value
+    of `true`) if it's the last word in the input, or if the word
+    immediately following it is also a flag.
 
-Requirements:
+4.  **Quoted Values**: To handle values containing spaces, a value can
+    be enclosed in double quotes (`"`). Your parser must treat the
+    entire quoted segment as a single value, and the quotes themselves
+    should be removed from the final stored value.
 
-    The function should correctly identify the command and all flags.
+5.  **Flag Naming**: When storing a flag in the `Flags` map, you must
+    remove the leading `-` or `--` from its name. For example, `--path`
+    becomes `path`.
 
-    Flag names in the map should be stored without the leading - or --.
+## Definitive Example
 
-    If a flag is present but has no value following it (and the next word isn't another flag), it's a boolean flag and its value in the map should be true.
+**Input String:**
 
-    Your parser must correctly handle quoted values containing spaces.
+    publish --path "/reports/q1 report.pdf" --user "alex doe" -v
 
-Example:
+**Expected ParsedCommand Output:**
 
-    Input String: remote add --name origin "/users/alex/repo.git" -f
+    Command: "publish"
 
-    Expected Output:
-
-        Command: "remote"
-
-        Flags: map[string]interface{}{"name": "origin", "f": true}
-
-        Wait, what about add? Good catch. For this problem, let's assume the command can be multi-part. Anything before the first flag is part of the command. So the command is actually "remote add".
-
-Corrected Example:
-
-    Input String: remote add --name origin "/users/alex/repo.git" -f
-
-    Expected Output (ParsedCommand struct):
-
-        Command: "remote add"
-
-        Flags: map[string]interface{}{"name": "origin", "f": true}
+    Flags: map[string]interface{}{
+        "path": "/reports/q1 report.pdf",
+        "user": "alex doe",
+        "v": true,
+    }
