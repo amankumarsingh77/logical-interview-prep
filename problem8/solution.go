@@ -3,13 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 )
 
 func main() {
-	// --- Test Data ---
-	// This is the primary data map used for most test cases.
 	data := map[string]interface{}{
 		"user": map[string]interface{}{
 			"name": "Alex",
@@ -22,8 +19,6 @@ func main() {
 		"status": "active",
 	}
 
-	// --- Test Cases ---
-	// A slice of structs to define all our test scenarios.
 	testCases := []struct {
 		name        string
 		template    string
@@ -56,28 +51,28 @@ func main() {
 			name:        "Missing Path - Top-Level Key",
 			template:    "System info: ${system.version}",
 			data:        data,
-			expectedStr: "System info: ", // Should resolve to an empty string
+			expectedStr: "System info: ",
 			expectErr:   false,
 		},
 		{
 			name:        "Missing Path - Nested Key",
 			template:    "User address: ${user.address.city}",
 			data:        data,
-			expectedStr: "User address: ", // Should resolve to an empty string
+			expectedStr: "User address: ",
 			expectErr:   false,
 		},
 		{
 			name:        "Path Traverses Past a Final Value",
 			template:    "Status detail: ${status.detail}",
 			data:        data,
-			expectedStr: "Status detail: ", // 'status' is a string, not a map
+			expectedStr: "Status detail: ",
 			expectErr:   false,
 		},
 		{
 			name:        "Error Case - Malformed Placeholder (Unclosed)",
 			template:    "Hello, ${user.name",
 			data:        data,
-			expectedStr: "", // Expected string is irrelevant when an error is expected
+			expectedStr: "",
 			expectErr:   true,
 		},
 		{
@@ -110,13 +105,10 @@ func main() {
 		},
 	}
 
-	// --- Running Tests ---
 	fmt.Println("Running test cases...")
 	for _, tc := range testCases {
-		// Replace 'ResolveTemplate' with your actual function name if different
 		resultStr, err := ResolveTemplate(tc.template, tc.data)
 
-		// Check for unexpected errors
 		if !tc.expectErr && err != nil {
 			fmt.Printf("❌ FAILED: %s\n", tc.name)
 			fmt.Printf("   Template: %#v\n", tc.template)
@@ -124,7 +116,6 @@ func main() {
 			continue
 		}
 
-		// Check for expected errors
 		if tc.expectErr {
 			if err == nil {
 				fmt.Printf("❌ FAILED: %s\n", tc.name)
@@ -136,7 +127,6 @@ func main() {
 			continue
 		}
 
-		// Check for correct string result
 		if resultStr != tc.expectedStr {
 			fmt.Printf("❌ FAILED: %s\n", tc.name)
 			fmt.Printf("   Template: %#v\n", tc.template)
@@ -152,7 +142,7 @@ func ResolveTemplate(text string, data map[string]interface{}) (string, error) {
 	var formatedString strings.Builder
 	formatedString.Grow(len(text))
 	start := 0
-	end := 0
+
 	for {
 		open := strings.Index(text[start:], "${")
 		if open == -1 {
@@ -161,10 +151,8 @@ func ResolveTemplate(text string, data map[string]interface{}) (string, error) {
 		}
 		open += start
 		formatedString.WriteString(text[start:open])
-		log.Println(start, open)
-		log.Println(text[start:open])
 
-		end = strings.Index(text[open:], "}")
+		end := strings.Index(text[open:], "}")
 		if end == -1 {
 			return "", errors.New("malformed placeholder: missing closing '}'")
 		}

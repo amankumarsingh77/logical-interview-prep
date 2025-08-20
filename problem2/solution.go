@@ -25,7 +25,6 @@ var validCoins = map[int]bool{
 }
 
 func main() {
-	// 1. Initialize the machine with some inventory
 	inventory := map[string]Item{
 		"Cola":  {Name: "Cola", Price: 25, Stock: 5},
 		"Chips": {Name: "Chips", Price: 35, Stock: 10},
@@ -36,7 +35,6 @@ func main() {
 	fmt.Println("Vending Machine is ready.")
 	fmt.Println("---")
 
-	// --- Scenario 1: Successful Purchase ---
 	fmt.Println("## Scenario 1: Successful Purchase of Candy ##")
 	fmt.Println("Inserting a 10 coin...")
 	if err := vm.InsertCoin(10); err != nil {
@@ -51,7 +49,6 @@ func main() {
 	}
 	fmt.Println("---")
 
-	// --- Scenario 2: Insufficient Funds & Cancel ---
 	fmt.Println("## Scenario 2: Insufficient Funds & Cancel ##")
 	fmt.Println("Inserting a 25 coin...")
 	if err := vm.InsertCoin(25); err != nil {
@@ -60,7 +57,6 @@ func main() {
 	fmt.Println("Selecting 'Chips' (Price 35)...")
 	change, err = vm.SelectProduct("Chips")
 	if err != nil {
-		// This is the expected outcome
 		fmt.Printf("Error (as expected): %v\n", err)
 	} else {
 		fmt.Printf("Success! Product dispensed. Change: %d\n", change)
@@ -70,7 +66,6 @@ func main() {
 	fmt.Printf("Refunded amount: %d\n", refund)
 	fmt.Println("---")
 
-	// --- Scenario 3: Purchase with Change ---
 	fmt.Println("## Scenario 3: Purchase with Change ##")
 	fmt.Println("Inserting a 25 coin...")
 	vm.InsertCoin(25)
@@ -86,9 +81,7 @@ func main() {
 	}
 	fmt.Println("---")
 
-	// --- Scenario 4: Out of Stock ---
 	fmt.Println("## Scenario 4: Item is Out of Stock ##")
-	// Buy the remaining 4 Colas
 	for i := 0; i < 5; i++ {
 		vm.InsertCoin(25)
 		vm.SelectProduct("Cola")

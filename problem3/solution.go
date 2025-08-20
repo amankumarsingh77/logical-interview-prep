@@ -12,17 +12,15 @@ var ErrPermanent = errors.New("a permanent error occurred")
 
 func main() {
 	fmt.Println(Retry(UnreliableAPICall, 4, time.Duration(100)))
-
 }
 
 func UnreliableAPICall() (string, error) {
-	// Simulate random failures
 	r := rand.Intn(10)
 
-	if r < 2 { // 20% chance of permanent error
+	if r < 2 {
 		fmt.Println("API call failed with a permanent error.")
 		return "", ErrPermanent
-	} else if r < 8 { // 40% chance of transient error
+	} else if r < 8 {
 		fmt.Println("API call failed with a transient error.")
 		return "", ErrTransient
 	}
@@ -39,5 +37,5 @@ func Retry(fn func() (string, error), retries int, delay time.Duration) (string,
 		time.Sleep(delay)
 		return Retry(fn, retries-1, delay*2)
 	}
-	return resp, nil
+	return resp, err
 }

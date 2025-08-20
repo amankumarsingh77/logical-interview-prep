@@ -1,4 +1,3 @@
-
 # Scenario: Concurrent Data Aggregator
 
 Imagine you're building a backend service. One of its features is to display aggregated data from several third-party sources. To ensure a snappy user experience, you need to fetch this data concurrently.
@@ -44,4 +43,8 @@ The entire `GetAggregatedReports` operation must have a global timeout of 300ms.
 
 ---
 
-I encourage you to think out loud as you approach this. How would you structure your Go code to handle the concurrency, error handling, and the timeout? You can start by describing your high-level plan, or you can jump straight into the code.
+## Hints
+
+- Think about how to structure your Go code to handle the concurrency, error handling, and the timeout
+- Consider using goroutines and channels for concurrent execution
+- You can start by describing your high-level plan, or jump straight into the code

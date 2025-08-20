@@ -15,9 +15,6 @@ type Report struct {
 }
 
 func main() {
-	//rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	// A list of IDs to process
 	reportIDs := []string{
 		"alpha", "beta", "gamma", "delta",
 		"epsilon", "zeta", "eta", "theta",
@@ -26,14 +23,12 @@ func main() {
 	log.Println("Starting report aggregation...")
 	startTime := time.Now()
 
-	// Call your function
 	reports := GetAggregatedReports(reportIDs)
 
 	duration := time.Since(startTime)
 	log.Printf("Aggregation finished in %v.", duration)
 	log.Printf("Global timeout was 300ms.")
 
-	// Print the results
 	fmt.Println("\n--- Fetched Reports ---")
 	if len(reports) == 0 {
 		fmt.Println("No reports were successfully fetched.")
@@ -43,7 +38,6 @@ func main() {
 		}
 	}
 	fmt.Println("-----------------------")
-
 }
 
 func GetAggregatedReports(reportIDs []string) map[string]Report {
